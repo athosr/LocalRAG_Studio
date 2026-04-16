@@ -1,0 +1,20 @@
+{
+  "name": "localrag-studio",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"],
+    "engineStrict": true
+  },
+  "scripts": {
+    "build:packages": "pnpm --filter @localrag/config --filter @localrag/db build",
+    "dev": "pnpm run build:packages && pnpm --filter @localrag/desktop dev",
+    "build": "pnpm run build:packages && pnpm --filter @localrag/desktop build",
+    "test": "pnpm --filter \"./packages/*\" test",
+    "db:migrate": "pnpm --filter @localrag/db migrate",
+    "lint": "pnpm -r exec tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

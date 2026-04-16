@@ -1,0 +1,24 @@
+services:
+  db:
+    build:
+      context: ./docker/db
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: rag
+      POSTGRES_DB: ragstudio
+    # Host port 5433 avoids clashing with a local PostgreSQL install on 5432 (common on Windows).
+    ports:
+      - "5433:5432"
+    # PG 18+ images require the mount at /var/lib/postgresql (not .../data) so the
+    # cluster lives under a versioned path; see docker-library/postgres#1259.
+    volumes:
+      - rag_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d ragstudio"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  rag_pgdata:

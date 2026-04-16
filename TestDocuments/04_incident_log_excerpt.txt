@@ -1,0 +1,15 @@
+Incident log excerpt — Aurora Field Lab (redacted for demo)
+
+INC-2024-031 (closed)
+Summary: Overnight drift on S-440 units 7 and 9 correlated with a failed desiccant pack.
+Resolution: Replaced DP-5 packs, reran zero-air procedure, drift returned within spec.
+Reporter: Jordan Patel
+
+INC-2025-004 (open)
+Summary: Intermittent voltage sag on Bus B during Island mode when kitchen kettle and drying oven run concurrently.
+Temporary mitigation: Stagger high loads; do not exceed 18 kW sustained draw.
+Assigned: Sam Rivera
+
+INC-2025-011 (closed)
+Summary: False amber beacon on Building C due to ice bridging the W-7 flow sensor.
+Resolution: Cleared ice bridge; beacon logic verified.

@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+
+# Build artifacts
+dist
+out
+apps/desktop/out
+release
+
+# Environment (secrets — commit `.env.example` only)
+.env
+.env.local
+.env.*.local
+
+# Logs & package-manager debug
+*.log
+pnpm-debug.log*
+
+# Tests & coverage
+coverage
+
+# Tooling caches
+.turbo
+*.tsbuildinfo
+
+# Python (rag-service)
+rag-service/.venv
+rag-service/**/__pycache__
+rag-service/.pytest_cache
+rag-service/*.egg-info
+rag-service/src/*.egg-info
+
+# OS metadata
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors / IDEs
+.idea/
+
+# Certificates / signing (Electron packaging)
+*.pem

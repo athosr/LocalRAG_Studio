@@ -1,0 +1,22 @@
+{
+  "site": "Aurora Field Lab",
+  "year": 2025,
+  "perimeter_array": {
+    "next_full_service": "2025-09-12",
+    "technician_primary": "Jordan Patel",
+    "technician_backup": "Sam Rivera",
+    "estimated_downtime_hours": 6,
+    "notes": "Bring spare S-440 desiccant packs DP-5. Confirm micro-hydro intake screen is clear before Island mode testing."
+  },
+  "building_c": {
+    "roof_inspection": "2025-07-03",
+    "beacon_meaning": {
+      "amber": "Boil water advisory active for W-7 meltwater collection.",
+      "blue": "All-clear for routine sampling."
+    }
+  },
+  "inventory": {
+    "zero_air_canisters": { "part": "ZA-12", "on_hand": 4, "reorder_at": 2 },
+    "desiccant_packs": { "part": "DP-5", "on_hand": 11 }
+  }
+}

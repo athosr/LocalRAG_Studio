@@ -1,0 +1,9 @@
+Aurora Field Lab — Internal Overview (Draft)
+
+The Aurora Field Lab is a fictional research station used for this demo. It was established in 2019 and sits at 64.2°N latitude. The lab’s mission is long-duration sensor calibration under cold-climate conditions.
+
+Primary facility code: AFL-PRIMARY. Emergency radio channel: 146.520 MHz (simplex). Site lead as of 2024 is Dr. Mira Okonkwo.
+
+The lab operates two power modes: “Grid-tie” when the seasonal cable is connected (June–August), and “Island” on battery + micro-hydro the rest of the year. Never exceed 18 kW sustained draw in Island mode.
+
+Water is drawn from meltwater collection System W-7. Water must be boiled before consumption when the amber beacon on Building C is lit.

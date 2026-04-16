@@ -1,0 +1,29 @@
+{
+  "name": "@localrag/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@localrag/config": "workspace:*",
+    "@localrag/db": "workspace:*",
+    "@localrag/ingestion": "workspace:*",
+    "@localrag/llm": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.4"
+  }
+}
