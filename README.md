@@ -43,20 +43,20 @@ flowchart LR
     RE[React renderer]
   end
   subgraph pkgs [packages]
-    CFG[@localrag/config]
-    DB[@localrag/db]
+    CFG["localrag/config"]
+    DB["localrag/db"]
   end
   subgraph py [rag-service]
     API[FastAPI]
   end
-  PG[(Postgres 18\npgvector + pgvectorscale)]
+  PG[(Postgres 18 + pgvector + pgvectorscale)]
   RE --> EL
   EL --> CFG
   EL --> DB
   EL -->|HTTP localhost| API
   DB --> PG
   API --> PG
-  API -.->|HTTP| OLL[Ollama / compatible API]
+  API -.->|HTTP| OLL["Ollama / compatible API"]
 ```
 
 **Flow:** ingest → parse → chunk → embed → write chunks · query → embed question → vector search → prompt → complete → citations.
