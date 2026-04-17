@@ -5,3 +5,4 @@ export * from "./repos/documents.js";
 export * from "./repos/events.js";
 export * from "./repos/search.js";
 export * from "./repos/chunks.js";
+export * from "./repos/chat.js";

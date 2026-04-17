@@ -14,6 +14,7 @@ export type SettingsViewProps = {
   onResetSettings: () => void | Promise<void>;
   onRefreshOllamaModels: () => void | Promise<void>;
   onClearApiKey: () => void | Promise<void>;
+  onClearChatHistory: () => void | Promise<void>;
   providerLabel: string;
 };
 
@@ -29,6 +30,7 @@ export function SettingsView({
   onResetSettings,
   onRefreshOllamaModels,
   onClearApiKey,
+  onClearChatHistory,
   providerLabel,
 }: SettingsViewProps) {
   return (
@@ -155,6 +157,32 @@ export function SettingsView({
                 />
               </>
             )}
+          </section>
+
+          <section className="settings-card">
+            <h2 className="settings-card-title">Chat</h2>
+            <label className={settingsStyles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={draft.chat.persistHistory}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    chat: { ...draft.chat, persistHistory: e.target.checked },
+                  })
+                }
+              />
+              <span>Save chat history to the local database (reloads when you open the app)</span>
+            </label>
+            <p className="sources-hint">
+              When turned off, messages stay only until you close the window. Turning it on again loads saved history
+              from the database.
+            </p>
+            <div className="row row-tight">
+              <button type="button" className="danger-ghost" disabled={busy} onClick={() => void onClearChatHistory()}>
+                Remove all chat messages…
+              </button>
+            </div>
           </section>
 
           <section className="settings-card">

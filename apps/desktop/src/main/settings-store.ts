@@ -23,6 +23,7 @@ function mergeSettings(raw: unknown): AppSettings {
     ollama: { ...d.ollama, ...(isObj(r.ollama) ? r.ollama : {}) },
     customHttp: { ...d.customHttp, ...(isObj(r.customHttp) ? r.customHttp : {}) },
     rag: { ...d.rag, ...(isObj(r.rag) ? r.rag : {}) },
+    chat: { ...d.chat, ...(isObj(r.chat) ? r.chat : {}) },
   });
 }
 

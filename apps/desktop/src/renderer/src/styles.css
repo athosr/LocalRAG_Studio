@@ -237,6 +237,22 @@ body {
   justify-content: center;
 }
 
+.nav-pill-pending {
+  color: var(--text-primary);
+}
+
+.nav-pill-spinner {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+.topbar-ingest {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .topbar-actions {
   grid-column: 3;
   justify-self: end;
@@ -820,6 +836,12 @@ textarea:focus-visible {
   color: var(--text-primary);
 }
 
+.answer-body .answer-strong {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+
 .citation {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
@@ -905,6 +927,11 @@ textarea:focus-visible {
   width: 28px;
   height: 28px;
   border-width: 3px;
+}
+
+.spinner-on-primary {
+  border-color: rgb(255 255 255 / 0.35);
+  border-top-color: #fff;
 }
 
 @keyframes spin {

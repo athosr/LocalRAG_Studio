@@ -1,4 +1,7 @@
-from rag_service.domain.citations import parse_cited_ref_indices
+from rag_service.domain.citations import (
+    filter_valid_ref_indices,
+    parse_cited_ref_indices,
+)
 
 
 def test_single_refs():
@@ -18,3 +21,11 @@ def test_dedupe_left_to_right():
 
 def test_double_digit_single():
     assert parse_cited_ref_indices("only [#12]") == [12]
+
+
+def test_filter_valid_ref_indices_drops_out_of_range_and_dedupes():
+    assert filter_valid_ref_indices([3, 0, 7, 3, 1], max_ref=3) == [3, 1]
+
+
+def test_filter_valid_ref_indices_empty_when_no_refs_available():
+    assert filter_valid_ref_indices([1, 2, 3], max_ref=0) == []

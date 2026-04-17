@@ -7,6 +7,12 @@ import {
   uuid,
   customType,
 } from "drizzle-orm/pg-core";
+
+/** Optional retrieval payload on assistant rows (citations, other chunks). */
+export type MessageMetadata = {
+  citations?: unknown[];
+  otherRetrieved?: unknown[];
+} | null;
 /** pgvector column (768 dims); ANN index is pgvectorscale StreamingDiskANN (see migrations) */
 const vector768 = customType<{ data: number[]; driverData: string }>({
   dataType() {
@@ -62,6 +68,7 @@ export const messages = pgTable("messages", {
     .references(() => conversations.id, { onDelete: "cascade" }),
   role: text("role").notNull(),
   content: text("content").notNull(),
+  metadata: jsonb("metadata").$type<MessageMetadata>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

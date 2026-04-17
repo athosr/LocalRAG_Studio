@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { documents } from "../schema.js";
 
@@ -28,6 +28,12 @@ export async function insertDocument(
 
 export async function deleteDocument(db: Db, id: string) {
   await db.delete(documents).where(eq(documents.id, id));
+}
+
+/** Deletes every document row; chunk rows cascade via FK. */
+export async function deleteAllDocuments(db: Db): Promise<number> {
+  const removed = await db.delete(documents).where(sql`true`).returning({ id: documents.id });
+  return removed.length;
 }
 
 export async function getDocument(db: Db, id: string) {

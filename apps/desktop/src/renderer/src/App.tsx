@@ -13,7 +13,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { docs, refreshDocs, deleteDocument } = useDocuments(setError, setBusy);
+  const { docs, refreshDocs, deleteDocument, clearLibrary } = useDocuments(setError, setBusy);
   const {
     draft,
     setDraft,
@@ -36,6 +36,7 @@ export function App() {
     refreshDocs,
     setTab,
     tab,
+    persistChatHistory: draft ? draft.chat.persistHistory : undefined,
   });
 
   useEffect(() => {
@@ -59,8 +60,10 @@ export function App() {
         setTab={setTab}
         docs={docs}
         busy={busy}
+        ingesting={chat.ingesting}
         onIngest={chat.onIngest}
         refreshDocs={refreshDocs}
+        onClearLibrary={clearLibrary}
       />
 
       {error ? (
@@ -80,22 +83,30 @@ export function App() {
             question={chat.question}
             setQuestion={chat.setQuestion}
             onQuestionKeyDown={chat.onQuestionKeyDown}
-            lastPrompt={chat.lastPrompt}
+            messages={chat.messages}
             asking={chat.asking}
-            answer={chat.answer}
             sourcesOpen={chat.sourcesOpen}
             setSourcesOpen={chat.setSourcesOpen}
             showOtherRetrieved={chat.showOtherRetrieved}
             setShowOtherRetrieved={chat.setShowOtherRetrieved}
+            sourcesCitations={chat.sourcesCitations}
+            sourcesOther={chat.sourcesOther}
             onIngest={chat.onIngest}
             onAsk={chat.onAsk}
+            onOpenSources={chat.onOpenSources}
             chatScrollRef={chat.chatScrollRef}
             sourcesCloseRef={chat.sourcesCloseRef}
           />
         ) : null}
 
         {tab === "library" ? (
-          <LibraryView docs={docs} busy={busy} onIngest={chat.onIngest} onDeleteDoc={deleteDocument} />
+          <LibraryView
+            docs={docs}
+            busy={busy}
+            ingesting={chat.ingesting}
+            onIngest={chat.onIngest}
+            onDeleteDoc={deleteDocument}
+          />
         ) : null}
 
         {tab === "settings" ? (
@@ -111,6 +122,7 @@ export function App() {
             onResetSettings={onResetSettings}
             onRefreshOllamaModels={onRefreshOllamaModels}
             onClearApiKey={onClearApiKey}
+            onClearChatHistory={chat.clearChatHistory}
             providerLabel={providerLabel}
           />
         ) : null}

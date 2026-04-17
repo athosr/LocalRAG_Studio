@@ -4,10 +4,8 @@ import styles from "./SourcesModal.module.css";
 
 export type SourcesModalProps = {
   open: boolean;
-  answer: {
-    citations: CitationRow[];
-    otherRetrieved: CitationRow[];
-  } | null;
+  citations: CitationRow[];
+  otherRetrieved: CitationRow[];
   showOtherRetrieved: boolean;
   setShowOtherRetrieved: (v: boolean | ((prev: boolean) => boolean)) => void;
   onClose: () => void;
@@ -16,13 +14,14 @@ export type SourcesModalProps = {
 
 export function SourcesModal({
   open,
-  answer,
+  citations,
+  otherRetrieved,
   showOtherRetrieved,
   setShowOtherRetrieved,
   onClose,
   closeButtonRef,
 }: SourcesModalProps) {
-  if (!open || !answer) return null;
+  if (!open) return null;
 
   return (
     <div className={styles.backdrop} role="presentation" onClick={onClose}>
@@ -51,7 +50,7 @@ export function SourcesModal({
           <p className="sources-hint">
             Chunk index is 0-based within each document; a short file often appears as a single chunk 0.
           </p>
-          {(answer.citations ?? []).map((c) => (
+          {citations.map((c) => (
             <div className="citation" key={`m-${c.chunkId}`}>
               <strong>
                 [#{c.refIndex}] {c.title} · chunk {c.chunkIndex}
@@ -59,7 +58,7 @@ export function SourcesModal({
               <div className="citation-excerpt">{c.excerpt}</div>
             </div>
           ))}
-          {(answer.otherRetrieved ?? []).length > 0 ? (
+          {otherRetrieved.length > 0 ? (
             <div className="other-retrieved">
               <button
                 type="button"
@@ -68,7 +67,7 @@ export function SourcesModal({
               >
                 {showOtherRetrieved
                   ? "Hide other retrieved passages"
-                  : `Show other retrieved passages (${(answer.otherRetrieved ?? []).length})`}
+                  : `Show other retrieved passages (${otherRetrieved.length})`}
               </button>
               {showOtherRetrieved ? (
                 <div className="other-retrieved-list">
@@ -76,7 +75,7 @@ export function SourcesModal({
                     These passages were also retrieved for the model but were not referenced as <code>[#n]</code> in
                     the answer above.
                   </p>
-                  {(answer.otherRetrieved ?? []).map((c) => (
+                  {otherRetrieved.map((c) => (
                     <div className="citation citation-muted" key={`mo-${c.chunkId}`}>
                       <strong>
                         [#{c.refIndex}] {c.title} · chunk {c.chunkIndex}

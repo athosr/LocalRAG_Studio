@@ -1,5 +1,6 @@
 import type { KeyboardEventHandler, RefObject } from "react";
-import type { CitationRow } from "../api/types.js";
+import type { ChatMessageViewModel, CitationRow } from "../api/types.js";
+import { renderAnswerWithBold } from "../lib/renderAnswerBold.js";
 import { SourcesModal } from "./SourcesModal.js";
 import chatStyles from "./ChatView.module.css";
 
@@ -9,19 +10,17 @@ export type ChatViewProps = {
   question: string;
   setQuestion: (v: string) => void;
   onQuestionKeyDown: KeyboardEventHandler<HTMLTextAreaElement>;
-  lastPrompt: string | null;
+  messages: ChatMessageViewModel[];
   asking: boolean;
-  answer: {
-    text: string;
-    citations: CitationRow[];
-    otherRetrieved: CitationRow[];
-  } | null;
   sourcesOpen: boolean;
   setSourcesOpen: (v: boolean) => void;
   showOtherRetrieved: boolean;
   setShowOtherRetrieved: (v: boolean | ((prev: boolean) => boolean)) => void;
+  sourcesCitations: CitationRow[];
+  sourcesOther: CitationRow[];
   onIngest: () => void | Promise<void>;
   onAsk: () => void | Promise<void>;
+  onOpenSources: (m: ChatMessageViewModel) => void;
   chatScrollRef: RefObject<HTMLDivElement | null>;
   sourcesCloseRef: RefObject<HTMLButtonElement | null>;
 };
@@ -32,24 +31,31 @@ export function ChatView({
   question,
   setQuestion,
   onQuestionKeyDown,
-  lastPrompt,
+  messages,
   asking,
-  answer,
   sourcesOpen,
   setSourcesOpen,
   showOtherRetrieved,
   setShowOtherRetrieved,
+  sourcesCitations,
+  sourcesOther,
   onIngest,
   onAsk,
+  onOpenSources,
   chatScrollRef,
   sourcesCloseRef,
 }: ChatViewProps) {
+  const showHero = messages.length === 0 && !asking;
+  const hasSources = (m: ChatMessageViewModel) =>
+    m.role === "assistant" &&
+    ((m.metadata?.citations?.length ?? 0) > 0 || (m.metadata?.otherRetrieved?.length ?? 0) > 0);
+
   return (
     <>
       <div className="chat-layout">
         <div className="chat-scroll" ref={chatScrollRef}>
           <div className="content-narrow">
-            {!lastPrompt && !asking && !answer ? (
+            {showHero ? (
               <div className="chat-hero">
                 <h1 className="chat-hero-title">Ask your documents</h1>
                 <p className="chat-hero-lead">
@@ -63,14 +69,42 @@ export function ChatView({
               </div>
             ) : null}
 
-            {lastPrompt ? (
+            {messages.length > 0 || asking ? (
               <section className="answer-section" aria-label="Conversation">
-                <div className="thread-user-turn">
-                  <span className="thread-label">You</span>
-                  <div className="thread-bubble thread-bubble-user thread-bubble-sent">{lastPrompt}</div>
-                </div>
+                {messages.map((m) =>
+                  m.role === "user" ? (
+                    <div className="thread-user-turn" key={m.id}>
+                      <span className="thread-label">You</span>
+                      <div className="thread-bubble thread-bubble-user thread-bubble-sent">{m.content}</div>
+                    </div>
+                  ) : (
+                    <div className="thread-assistant-turn" key={m.id}>
+                      <span className="thread-label">Assistant</span>
+                      <div className="thread-bubble thread-bubble-assistant">
+                        <div className="answer-body">{renderAnswerWithBold(m.content)}</div>
+                      </div>
+                      {hasSources(m) ? (
+                        <div className={chatStyles.sourcesTriggerWrap}>
+                          <button
+                            type="button"
+                            className={chatStyles.sourcesOpenBtn}
+                            onClick={() => onOpenSources(m)}
+                          >
+                            <span className={chatStyles.sourcesOpenLabel}>View sources</span>
+                            <span className={chatStyles.sourcesOpenMeta}>
+                              {(m.metadata?.citations ?? []).length} cited
+                              {(m.metadata?.otherRetrieved ?? []).length > 0
+                                ? ` · ${(m.metadata?.otherRetrieved ?? []).length} more retrieved`
+                                : ""}
+                            </span>
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ),
+                )}
 
-                {asking && !answer ? (
+                {asking ? (
                   <div className="thread-assistant-turn">
                     <span className="thread-label">Assistant</span>
                     <div
@@ -84,33 +118,6 @@ export function ChatView({
                       </div>
                     </div>
                   </div>
-                ) : null}
-
-                {answer ? (
-                  <>
-                    <div className="thread-assistant-turn">
-                      <span className="thread-label">Assistant</span>
-                      <div className="thread-bubble thread-bubble-assistant">
-                        <div className="answer-body">{answer.text}</div>
-                      </div>
-                    </div>
-
-                    <div className={chatStyles.sourcesTriggerWrap}>
-                      <button
-                        type="button"
-                        className={chatStyles.sourcesOpenBtn}
-                        onClick={() => setSourcesOpen(true)}
-                      >
-                        <span className={chatStyles.sourcesOpenLabel}>View sources</span>
-                        <span className={chatStyles.sourcesOpenMeta}>
-                          {(answer.citations ?? []).length} cited
-                          {(answer.otherRetrieved ?? []).length > 0
-                            ? ` · ${(answer.otherRetrieved ?? []).length} more retrieved`
-                            : ""}
-                        </span>
-                      </button>
-                    </div>
-                  </>
                 ) : null}
               </section>
             ) : null}
@@ -148,7 +155,7 @@ export function ChatView({
                 </div>
                 {asking ? null : (
                   <span className="kbd-hint">
-                    <kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Enter</kbd>
+                    <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> new line
                   </span>
                 )}
               </div>
@@ -159,7 +166,8 @@ export function ChatView({
 
       <SourcesModal
         open={sourcesOpen}
-        answer={answer}
+        citations={sourcesCitations}
+        otherRetrieved={sourcesOther}
         showOtherRetrieved={showOtherRetrieved}
         setShowOtherRetrieved={setShowOtherRetrieved}
         onClose={() => setSourcesOpen(false)}

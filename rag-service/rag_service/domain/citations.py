@@ -40,3 +40,17 @@ def parse_cited_ref_indices(answer_text: str) -> list[int]:
             seen.add(r)
             out.append(r)
     return out
+
+
+def filter_valid_ref_indices(refs: list[int], *, max_ref: int) -> list[int]:
+    """Keep left-to-right order while dropping out-of-range refs."""
+    if max_ref <= 0:
+        return []
+    out: list[int] = []
+    seen: set[int] = set()
+    for r in refs:
+        if r < 1 or r > max_ref or r in seen:
+            continue
+        seen.add(r)
+        out.append(r)
+    return out

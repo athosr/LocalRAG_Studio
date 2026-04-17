@@ -6,11 +6,22 @@ export type TopBarProps = {
   setTab: (t: AppTab) => void;
   docs: DocumentRow[];
   busy: boolean;
+  ingesting: boolean;
   onIngest: () => void | Promise<void>;
   refreshDocs: () => void | Promise<void>;
+  onClearLibrary: () => void | Promise<void>;
 };
 
-export function TopBar({ tab, setTab, docs, busy, onIngest, refreshDocs }: TopBarProps) {
+export function TopBar({
+  tab,
+  setTab,
+  docs,
+  busy,
+  ingesting,
+  onIngest,
+  refreshDocs,
+  onClearLibrary,
+}: TopBarProps) {
   return (
     <header className="app-topbar">
       <div className="topbar-brand">
@@ -34,11 +45,13 @@ export function TopBar({ tab, setTab, docs, busy, onIngest, refreshDocs }: TopBa
         </button>
         <button
           type="button"
-          className={`nav-pill${tab === "library" ? " nav-pill-active" : ""}`}
+          className={`nav-pill${tab === "library" ? " nav-pill-active" : ""}${ingesting ? " nav-pill-pending" : ""}`}
           aria-current={tab === "library" ? "page" : undefined}
+          aria-busy={ingesting || undefined}
           onClick={() => setTab("library")}
         >
           Library
+          {ingesting ? <span className="nav-pill-spinner spinner" aria-hidden /> : null}
           {docs.length > 0 ? <span className="nav-pill-count">{docs.length}</span> : null}
         </button>
         <button
@@ -54,12 +67,24 @@ export function TopBar({ tab, setTab, docs, busy, onIngest, refreshDocs }: TopBa
       <div className="topbar-actions">
         {tab === "library" ? (
           <>
-            <button type="button" className="primary" disabled={busy} onClick={() => void onIngest()}>
-              Add documents…
+            <button type="button" className="primary topbar-ingest" disabled={busy} onClick={() => void onIngest()}>
+              {ingesting ? (
+                <>
+                  <span className="spinner spinner-on-primary" aria-hidden />
+                  Adding…
+                </>
+              ) : (
+                "Add documents…"
+              )}
             </button>
             <button type="button" className="ghost" disabled={busy} onClick={() => void refreshDocs()}>
               Refresh
             </button>
+            {docs.length > 0 ? (
+              <button type="button" className="danger-ghost" disabled={busy} onClick={() => void onClearLibrary()}>
+                Remove all documents
+              </button>
+            ) : null}
           </>
         ) : tab === "chat" ? (
           <button type="button" className="ghost topbar-linkish" disabled={busy} onClick={() => setTab("library")}>

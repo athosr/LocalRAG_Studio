@@ -36,5 +36,19 @@ export function useDocuments(
     [api, refreshDocs, setBusy, setError],
   );
 
-  return { docs, refreshDocs, deleteDocument };
+  const clearLibrary = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api.clearAllDocuments();
+      if (!res.ok) return;
+      await refreshDocs();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [api, refreshDocs, setBusy, setError]);
+
+  return { docs, refreshDocs, deleteDocument, clearLibrary };
 }

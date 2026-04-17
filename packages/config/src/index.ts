@@ -21,6 +21,12 @@ export const appSettingsSchema = z.object({
     chunkOverlap: z.number().int().min(0).max(500).default(200),
     embeddingDimensions: z.number().int().min(64).max(4096).default(768),
   }),
+  chat: z
+    .object({
+      /** When true, messages are stored in the local database and reloaded on startup. */
+      persistHistory: z.boolean().default(true),
+    })
+    .default({ persistHistory: true }),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
@@ -44,6 +50,7 @@ export function defaultSettings(): AppSettings {
       embedModel: "text-embedding-3-small",
     },
     rag: {},
+    chat: { persistHistory: true },
   });
 }
 

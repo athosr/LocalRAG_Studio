@@ -4,9 +4,13 @@ loadDotenv({ path: resolve(process.cwd(), ".env") });
 
 import { appSettingsSchema, defaultSettings, parseEnv } from "@localrag/config";
 import {
+  appendUserAssistantPair,
   createDbPool,
+  deleteAllConversations,
+  deleteAllDocuments,
   deleteDocument,
   listDocuments,
+  listMessagesForLatestConversation,
   runMigrations,
 } from "@localrag/db";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
@@ -124,7 +128,27 @@ app.whenReady().then(async () => {
     return { ok: true };
   });
 
-  ipcMain.handle("documents:ingestPick", async () => {
+  ipcMain.handle("documents:clearAll", async () => {
+    if (!db) throw new Error("DB not ready");
+    const { response } = await dialog.showMessageBox(mainWindow ?? undefined, {
+      type: "warning",
+      title: "Remove all documents?",
+      message: "Remove every indexed document from your library?",
+      detail:
+        "This deletes the library index in your local database: document records, stored text chunks, and vector embeddings used for search. Files on your computer are not deleted. Chat history in the app is kept. This action cannot be undone.",
+      buttons: ["Remove all documents", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    });
+    if (response !== 0) {
+      return { ok: false as const, cancelled: true as const };
+    }
+    const removed = await deleteAllDocuments(db);
+    return { ok: true as const, removed };
+  });
+
+  ipcMain.handle("documents:pickIngestPaths", async () => {
     if (!db || !ragBase) throw new Error("Not ready");
     const res = await dialog.showOpenDialog(mainWindow ?? undefined, {
       properties: ["openFile", "multiSelections"],
@@ -135,25 +159,92 @@ app.whenReady().then(async () => {
         },
       ],
     });
-    if (res.canceled || res.filePaths.length === 0) return { ok: true, results: [] };
+    if (res.canceled || res.filePaths.length === 0) {
+      return { ok: true as const, paths: [] as string[] };
+    }
+    return { ok: true as const, paths: res.filePaths };
+  });
 
-    const settings = await loadSettings();
-    const apiKey = await loadApiKey();
-    const results = [];
-    for (const p of res.filePaths) {
-      const buffer = await readFile(p);
-      const fileName = p.split(/[/\\]/).pop() ?? "file";
+  ipcMain.handle("documents:ingestPath", async (_e, filePath: unknown) => {
+    const path = z.string().min(1).parse(filePath);
+    if (!db || !ragBase) throw new Error("Not ready");
+    const fileName = path.split(/[/\\]/).pop() ?? "file";
+    try {
+      const buffer = await readFile(path);
+      const settings = await loadSettings();
+      const apiKey = await loadApiKey();
       const r = await ragIngest({
         baseUrl: ragBase,
         buffer,
         fileName,
-        sourcePath: p,
+        sourcePath: path,
         settings,
         apiKey,
       });
-      results.push({ path: p, ...r });
+      return { path, ...r };
+    } catch (e) {
+      return {
+        path,
+        ok: false as const,
+        error: e instanceof Error ? e.message : String(e),
+      };
     }
-    return { ok: true, results };
+  });
+
+  ipcMain.handle("chat:listMessages", async () => {
+    if (!db) throw new Error("DB not ready");
+    const rows = await listMessagesForLatestConversation(db);
+    return rows.map((r) => ({
+      id: r.id,
+      role: r.role as "user" | "assistant",
+      content: r.content,
+      createdAt: r.createdAt.toISOString(),
+      metadata: r.metadata ?? null,
+    }));
+  });
+
+  const chatAppendExchangeSchema = z.object({
+    userContent: z.string().min(1).max(32000),
+    assistantContent: z.string().min(1).max(32000),
+    metadata: z
+      .object({
+        citations: z.array(z.unknown()).optional(),
+        otherRetrieved: z.array(z.unknown()).optional(),
+      })
+      .passthrough()
+      .nullable()
+      .optional(),
+  });
+
+  ipcMain.handle("chat:appendExchange", async (_e, payload: unknown) => {
+    if (!db) throw new Error("DB not ready");
+    const p = chatAppendExchangeSchema.parse(payload);
+    const ids = await appendUserAssistantPair(db, {
+      userContent: p.userContent,
+      assistantContent: p.assistantContent,
+      metadata: p.metadata ?? null,
+    });
+    return { ok: true as const, ...ids };
+  });
+
+  ipcMain.handle("chat:clearAll", async () => {
+    if (!db) throw new Error("DB not ready");
+    const { response } = await dialog.showMessageBox(mainWindow ?? undefined, {
+      type: "warning",
+      title: "Remove all chat messages?",
+      message: "Delete every stored message from chat history?",
+      detail:
+        "All chat turns saved in the local database will be removed. Your document library is not affected. This cannot be undone.",
+      buttons: ["Remove all messages", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    });
+    if (response !== 0) {
+      return { ok: false as const, cancelled: true as const };
+    }
+    const removed = await deleteAllConversations(db);
+    return { ok: true as const, removed };
   });
 
   ipcMain.handle("rag:ask", async (_e, question: unknown) => {

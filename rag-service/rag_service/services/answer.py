@@ -7,8 +7,55 @@ from typing import Any
 from rag_service.contracts import AppSettingsPayload, RagCitation
 from rag_service.db.pool import get_pool
 from rag_service.db import repositories as repo
-from rag_service.domain.citations import build_citation_excerpt, parse_cited_ref_indices
+from rag_service.domain.citations import (
+    build_citation_excerpt,
+    filter_valid_ref_indices,
+    parse_cited_ref_indices,
+)
 from rag_service.llm import embeddings as emb
+
+
+_IDENTIFIER_RE = re.compile(r"\b[A-Za-z]{1,12}-\d{1,12}[A-Za-z]?\b")
+
+
+def _extract_query_identifiers(question: str) -> list[str]:
+    identifiers: list[str] = []
+    seen: set[str] = set()
+    for match in _IDENTIFIER_RE.finditer(question):
+        token = match.group(0).upper()
+        if token in seen:
+            continue
+        seen.add(token)
+        identifiers.append(token)
+    return identifiers
+
+
+def _rerank_hits_by_identifier_overlap(
+    *,
+    question: str,
+    hits: list[repo.RetrievedChunk],
+    top_k: int,
+) -> list[repo.RetrievedChunk]:
+    if top_k <= 0 or not hits:
+        return []
+
+    identifiers = _extract_query_identifiers(question)
+    if not identifiers:
+        return hits[:top_k]
+
+    scored: list[tuple[int, float, int, repo.RetrievedChunk]] = []
+    for i, hit in enumerate(hits):
+        haystack = f"{hit.title}\n{hit.content}".upper()
+        matched = 0
+        for ident in identifiers:
+            if ident in haystack:
+                matched += 1
+        # Prefer hits that cover more exact question identifiers;
+        # tie-break by vector distance then original order.
+        scored.append((matched, -hit.distance, -i, hit))
+
+    scored.sort(reverse=True)
+    return [row[3] for row in scored[:top_k]]
 
 
 def _build_context_block(hits: list[repo.RetrievedChunk]) -> str:
@@ -19,6 +66,89 @@ def _build_context_block(hits: list[repo.RetrievedChunk]) -> str:
             f'[#{i + 1}] title="{h.title}" chunk={h.chunk_index} id={h.chunk_id}\n{excerpt}'
         )
     return "\n\n".join(blocks)
+
+
+def _build_answer_messages(*, context: str, question: str) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are a careful assistant. Answer using ONLY the provided context. "
+                "If the context is insufficient, say you do not know. "
+                "Every factual sentence MUST include at least one citation tag [#n] that directly supports it. "
+                "Use only citation numbers that exist in the provided context block. "
+                "You may group refs as [#2, #5] when one sentence is supported by multiple passages."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"Context:\n{context}\n\nQuestion: {question}",
+        },
+    ]
+
+
+def _build_citation_repair_messages(
+    *,
+    context: str,
+    question: str,
+    draft_answer: str,
+) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are a citation formatter. Keep the same meaning as the draft answer, "
+                "but ensure every factual sentence has [#n] citations from the provided context. "
+                "Do NOT introduce new facts. Use only citation numbers present in context."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Context:\n{context}\n\n"
+                f"Question: {question}\n\n"
+                f"Draft answer:\n{draft_answer}\n\n"
+                "Return only the corrected answer text with [#n] citations."
+            ),
+        },
+    ]
+
+
+def _extract_valid_cited_refs(answer_text: str, *, max_ref: int) -> list[int]:
+    raw = parse_cited_ref_indices(answer_text)
+    return filter_valid_ref_indices(raw, max_ref=max_ref)
+
+
+def _complete_with_citation_repair(
+    *,
+    settings: AppSettingsPayload,
+    api_key: str | None,
+    context: str,
+    question: str,
+    max_ref: int,
+) -> tuple[str, list[int]]:
+    text = emb.complete_chat(
+        settings,
+        api_key,
+        _build_answer_messages(context=context, question=question),
+    )
+    cited_refs = _extract_valid_cited_refs(text, max_ref=max_ref)
+    if cited_refs or max_ref <= 0:
+        return text, cited_refs
+
+    repaired = emb.complete_chat(
+        settings,
+        api_key,
+        _build_citation_repair_messages(
+            context=context,
+            question=question,
+            draft_answer=text,
+        ),
+    )
+    repaired_refs = _extract_valid_cited_refs(repaired, max_ref=max_ref)
+    if repaired_refs:
+        return repaired, repaired_refs
+    return text, []
 
 
 def answer_question(
@@ -36,27 +166,22 @@ def answer_question(
             f"Query embedding dimension mismatch: got {len(q_emb)}, expected {settings.rag.embedding_dimensions}"
         )
 
-    hits = repo.search_similar_chunks(pool, q_emb, settings.rag.top_k)
+    expanded_k = min(max(settings.rag.top_k * 5, settings.rag.top_k), 50)
+    retrieved = repo.search_similar_chunks(pool, q_emb, expanded_k)
+    hits = _rerank_hits_by_identifier_overlap(
+        question=question,
+        hits=retrieved,
+        top_k=settings.rag.top_k,
+    )
     context = _build_context_block(hits)
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a careful assistant. Answer using ONLY the provided context. "
-                "If the context is insufficient, say you do not know. When you use a fact, "
-                "cite the bracket reference like [#1] or [#2]. Cite only passages that directly "
-                "support that claim (do not add extra [#n] tags just because a keyword appears elsewhere). "
-                "You may group refs as [#2, #5] when one sentence is supported by multiple passages."
-            ),
-        },
-        {
-            "role": "user",
-            "content": f"Context:\n{context}\n\nQuestion: {question}",
-        },
-    ]
-
-    text = emb.complete_chat(settings, api_key, messages)
+    text, cited_order = _complete_with_citation_repair(
+        settings=settings,
+        api_key=api_key,
+        context=context,
+        question=question,
+        max_ref=len(hits),
+    )
 
     all_citations: list[RagCitation] = []
     for i, h in enumerate(hits):
@@ -72,12 +197,9 @@ def answer_question(
         )
 
     by_ref = {c.ref_index: c for c in all_citations}
-    cited_order = parse_cited_ref_indices(text)
     citations: list[RagCitation] = []
     if cited_order:
         citations = [by_ref[r] for r in cited_order if r in by_ref]
-    if not citations and all_citations:
-        citations = [all_citations[0]]
 
     primary_refs = {c.ref_index for c in citations}
     other_retrieved = [c for c in all_citations if c.ref_index not in primary_refs]
