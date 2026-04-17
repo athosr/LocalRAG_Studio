@@ -176,6 +176,21 @@ exit /b 1
 
 :after_migrate
 
+echo Ensuring default Ollama embedding model ^(nomic-embed-text-v2-moe:latest^) ...
+set "OLLAMA_EMBED_MODEL=nomic-embed-text-v2-moe:latest"
+where ollama >nul 2>&1
+if errorlevel 1 (
+  echo WARNING: ollama was not found on PATH. Install Ollama from https://ollama.com then run:
+  echo         ollama pull %OLLAMA_EMBED_MODEL%
+) else (
+  echo Running: ollama pull %OLLAMA_EMBED_MODEL% ^(no-op if already present^)
+  ollama pull %OLLAMA_EMBED_MODEL%
+  if errorlevel 1 (
+    echo WARNING: ollama pull failed ^(is the Ollama app running?^). After starting Ollama, run:
+    echo         ollama pull %OLLAMA_EMBED_MODEL%
+  )
+)
+
 echo.
 echo Setup finished from a clean state. Run run.bat to start the desktop app.
 exit /b 0

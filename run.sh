@@ -22,6 +22,26 @@ if [[ ! -d node_modules ]]; then
   exit 1
 fi
 
+if ! command -v docker >/dev/null 2>&1; then
+  echo "ERROR: Docker was not found. Install Docker and ensure it is on PATH."
+  echo "If you use Postgres elsewhere, set DATABASE_URL in .env and run: pnpm dev"
+  exit 1
+fi
+
+echo "Ensuring Postgres container is running ..."
+docker compose up -d
+
+waitcount=0
+until docker compose exec -T db pg_isready -U rag -d ragstudio >/dev/null 2>&1; do
+  waitcount=$((waitcount + 1))
+  if [[ "$waitcount" -ge 60 ]]; then
+    echo "ERROR: Postgres did not become ready in time. Try: docker compose logs db"
+    echo "If you changed the host port in docker-compose.yml, set DATABASE_URL in .env to match."
+    exit 1
+  fi
+  sleep 2
+done
+
 if command -v pnpm >/dev/null 2>&1; then
   exec pnpm run dev
 else

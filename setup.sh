@@ -170,5 +170,18 @@ if ! pnpm_cmd run db:migrate; then
   exit 1
 fi
 
+OLLAMA_EMBED_MODEL="nomic-embed-text-v2-moe:latest"
+echo "Ensuring default Ollama embedding model ($OLLAMA_EMBED_MODEL) ..."
+if command -v ollama >/dev/null 2>&1; then
+  echo "Running: ollama pull $OLLAMA_EMBED_MODEL (no-op if already present)"
+  if ! ollama pull "$OLLAMA_EMBED_MODEL"; then
+    echo "WARNING: ollama pull failed (is the Ollama app running?). After starting Ollama, run:"
+    echo "        ollama pull $OLLAMA_EMBED_MODEL"
+  fi
+else
+  echo "WARNING: ollama was not found on PATH. Install Ollama from https://ollama.com then run:"
+  echo "        ollama pull $OLLAMA_EMBED_MODEL"
+fi
+
 echo
 echo "Setup finished from a clean state. Run ./run.sh to start the desktop app."

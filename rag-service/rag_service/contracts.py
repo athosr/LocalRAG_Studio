@@ -12,7 +12,7 @@ class OllamaSettings(BaseModel):
 
     host: str = Field(default="http://127.0.0.1:11434")
     chat_model: str = Field(alias="chatModel", default="llama3.2")
-    embed_model: str = Field(alias="embedModel", default="nomic-embed-text")
+    embed_model: str = Field(alias="embedModel", default="nomic-embed-text-v2-moe:latest")
 
 
 class CustomHttpSettings(BaseModel):

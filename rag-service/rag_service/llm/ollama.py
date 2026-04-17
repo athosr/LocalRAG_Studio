@@ -30,8 +30,13 @@ def ollama_embed(host: str, model: str, prompt: str) -> list[float]:
                 headers={"content-type": "application/json"},
             )
             if res.status_code != 200:
+                hint = (
+                    f" If the model is missing, run: ollama pull {model}"
+                    if res.status_code == 404
+                    else ""
+                )
                 raise RuntimeError(
-                    f"Ollama embeddings failed: {res.status_code} {res.text}"
+                    f"Ollama embeddings failed: {res.status_code} {res.text}{hint}"
                 )
             data: dict[str, Any] = res.json()
             emb = data.get("embedding")
@@ -51,8 +56,13 @@ def ollama_chat(host: str, model: str, messages: list[dict[str, str]]) -> str:
                 headers={"content-type": "application/json"},
             )
             if res.status_code != 200:
+                hint = (
+                    f" If the model is missing, run: ollama pull {model}"
+                    if res.status_code == 404
+                    else ""
+                )
                 raise RuntimeError(
-                    f"Ollama chat failed: {res.status_code} {res.text}"
+                    f"Ollama chat failed: {res.status_code} {res.text}{hint}"
                 )
             data = res.json()
             msg = data.get("message") or {}

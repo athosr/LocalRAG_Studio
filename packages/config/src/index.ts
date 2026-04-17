@@ -7,7 +7,7 @@ export const appSettingsSchema = z.object({
   ollama: z.object({
     host: z.string().url().default("http://127.0.0.1:11434"),
     chatModel: z.string().min(1).default("llama3.2"),
-    embedModel: z.string().min(1).default("nomic-embed-text"),
+    embedModel: z.string().min(1).default("nomic-embed-text-v2-moe:latest"),
   }),
   customHttp: z.object({
     baseUrl: z.string().url(),
